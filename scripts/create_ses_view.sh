@@ -65,6 +65,7 @@ for sub in "$SRC"/sub-*; do
   # If datatype folders exist under sub-*/ (anat/func/...), sessionize each.
   found_dt=0
   for d in "$sub"/*; do
+    [[ "$(basename "$d")" == ses-* ]] && continue
     [[ -d "$d" ]] || continue
     dt="$(basename "$d")"
     if is_known_dt "$dt"; then
