@@ -297,25 +297,40 @@ def read_fs_surface_vertices_faces(
     logger: logging.Logger,
     stem: str,
 ) -> Optional[tuple[np.ndarray, np.ndarray, Path]]:
-    """
-    Returns (vertices_in_tkr, faces, used_path) or None if not found.
-    """
+    
     cands = surface_candidates(fs_surf_dir, fs_hemi, surf_name)
     if not cands:
         return None
 
-    # prefer canonical (non-.T1) first
     cand = cands[0]
-    v, f = read_geometry(str(cand.path))
-
-    if cand.is_scanner_ras:
-        # Convert scanner RAS -> tkr RAS so that geometry matches typical FS mgz->nifti affine pipelines.
-        M = scanner_to_tkr_affine(t1_mgz)
-        v = apply_affine(M, v)
-        logger.warning("[%s] Using fallback surface %s (converted scanner->tkr)", stem, cand.path.name)
+    
+    # برای تراز شدن در اسلایسر، باید از mris_convert --to-scanner استفاده کنیم
+    # این کار جابجایی مختصات فریسورفر به فضای اسکنر را انجام می‌دهد
+    temp_scanner = cand.path.with_suffix(".tmp_scanner")
+    try:
+        # اجرای دستور تبدیل مختصات به اسکنر
+        subprocess.run(["mris_convert", "--to-scanner", str(cand.path), str(temp_scanner)], 
+                       check=True, capture_output=True)
+        
+        # حالا خواندن مختصات تراز شده
+        v, f = read_geometry(str(temp_scanner))
+        
+        if temp_scanner.exists():
+            temp_scanner.unlink() # پاک کردن فایل موقت
+            
+    except Exception as e:
+        logger.error("[%s] Error aligning surface %s: %s", stem, cand.path.name, e)
+        # Fallback به روش دستی اگر mris_convert شکست خورد
+        v, f = read_geometry(str(cand.path))
+        # اعمال ماتریس جابجایی دستی (Internal -> Scanner)
+        hdr = t1_mgz.header
+        M = hdr.get_vox2ras_tkr()
+        M_inv = np.linalg.inv(M)
+        v2w = hdr.get_vox2ras()
+        full_m = v2w @ M_inv
+        v = apply_affine(full_m, v)
 
     return np.asarray(v, dtype=np.float64), np.asarray(f, dtype=np.int64), cand.path
-
 
 # -------------------------
 # Core per-subject processing
