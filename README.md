@@ -229,3 +229,66 @@ The script creates a structured directory inspired by BIDS Derivatives:
         ...
 ```
 
+# Segmentation: 3D U-Net (MNI space)
+
+This stage trains and applies a 3D U-Net to predict a **9-class segmentation** in **MNI152 space** using the outputs of the preprocessing stage.
+
+## Inputs (from preprocessing)
+Expected BIDS-derivatives-style files under `dataset.path`:
+
+- **MNI T1**
+  - `sub-XXXX/ses-01/anat/sub-XXXX_ses-01_space-MNI152_desc-preproc_T1w.nii.gz`
+- **MNI aparc+aseg**
+  - `sub-XXXX/ses-01/anat/sub-XXXX_ses-01_space-MNI152_desc-aparc+aseg_dseg.nii.gz`
+- **MNI filled**
+  - `sub-XXXX/ses-01/anat/sub-XXXX_ses-01_space-MNI152_desc-filled_T1w.nii.gz`
+
+A split CSV is required with at least:
+- `subject` (e.g., `sub-100307`)
+- `split` in `{train, val, test}`
+
+## Outputs
+### Training
+- Checkpoints: `${outputs.ckpt_dir}`
+- Logs: `${outputs.log_dir}`
+
+### Inference (predictions)
+Predictions are saved in BIDS-derivatives style under `${outputs.pred_root}`:
+
+`sub-XXXX/ses-01/anat/sub-XXXX_ses-01_space-MNI152_desc-seg9_pred.nii.gz`
+
+## Usage
+
+### Train (single GPU)
+```bash
+scpp seg train \
+  dataset.path=/path/to/scpp-preproc-0.1 \
+  dataset.split_file=/path/to/dataset_split.csv \
+  outputs.root=/path/to/ckpts/segmentation \
+  trainer.use_ddp=false
+```
+## Train (multi-GPU DDP with torchrun)
+```bash
+scpp seg train --torchrun --nproc-per-node 2 \
+  dataset.path=/path/to/scpp-preproc-0.1 \
+  dataset.split_file=/path/to/dataset_split.csv \
+  outputs.root=/path/to/ckpts/segmentation \
+  trainer.use_ddp=true
+```
+## Inference
+```bash
+scpp seg infer \
+  dataset.path=/path/to/scpp-preproc-0.1 \
+  dataset.split_file=/path/to/dataset_split.csv \
+  model.ckpt_path=/path/to/seg_best_dice.pt \
+  outputs.pred_root=/path/to/preds
+```
+## Evaluation
+```bash
+scpp seg eval \
+  dataset.path=/path/to/scpp-preproc-0.1 \
+  dataset.split_file=/path/to/dataset_split.csv \
+  outputs.pred_root=/path/to/preds \
+  outputs.eval_csv=/path/to/seg_eval_test.csv
+```
+
