@@ -1,4 +1,3 @@
-#!/usr/bin/env bash
 set -euo pipefail
 shopt -s nullglob
 
@@ -40,14 +39,12 @@ fi
 
 mkdir -p "$DST"
 
-# Link top-level BIDS files (dataset_description.json, participants.tsv, etc.)
 for f in "$SRC"/*; do
   bn="$(basename "$f")"
   [[ "$bn" == sub-* ]] && continue
   ln -sfn "$f" "$DST/$bn"
 done
 
-# Known BIDS datatypes (we'll only sessionize these directories if present)
 KNOWN_DT=("anat" "func" "dwi" "fmap" "perf" "pet" "beh" "eeg" "meg" "ieeg" "nirs" "micr" "motion" "mrs")
 
 is_known_dt() {
@@ -62,7 +59,6 @@ for sub in "$SRC"/sub-*; do
   sid="$(basename "$sub")"
   mkdir -p "$DST/$sid/ses-$SES"
 
-  # If datatype folders exist under sub-*/ (anat/func/...), sessionize each.
   found_dt=0
   for d in "$sub"/*; do
     [[ "$(basename "$d")" == ses-* ]] && continue
@@ -75,7 +71,6 @@ for sub in "$SRC"/sub-*; do
         [[ -f "$f" ]] || continue
         bn="$(basename "$f")"
 
-        # insert ses only if filename starts with sub-XXX_ and doesn't already contain _ses-
         if [[ "$bn" == ${sid}_* && "$bn" != *"_ses-"* ]]; then
           new="${bn/#${sid}_/${sid}_ses-${SES}_}"
         else
@@ -86,7 +81,6 @@ for sub in "$SRC"/sub-*; do
     fi
   done
 
-  # Fallback: if no datatype folders, link files directly under subject into ses/anat
   if [[ "$found_dt" -eq 0 ]]; then
     mkdir -p "$DST/$sid/ses-$SES/anat"
     for f in "$sub"/*; do

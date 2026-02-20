@@ -10,7 +10,7 @@ So far, we focused on creating a clean project skeleton and preparing **session-
 ### 1) Created a CLI-first Python project skeleton
 We set up a standard Python package structure and a minimal CLI so this repo can evolve into a real pipeline package.
 
-- Python package: `src/nipoppy_custom_pipeline/`
+- Python package: `src/simcortexpp/`
 - CLI entrypoint: `ncp` (Typer)
   - `ncp hello` — sanity check
   - `ncp check-env` — prints Python version and verifies `nipoppy` imports
@@ -68,7 +68,7 @@ You will usually have **three separate roots**:
 ```text
 nipoppy-custom-pipeline/
 ├── src/
-│   └── nipoppy_custom_pipeline/
+│   └── simcortexpp/
 │       ├── cli/
 │       │   └── main.py            # 'ncp' CLI entrypoint (Typer)
 │       └── utils/

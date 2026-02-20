@@ -1,0 +1,31 @@
+dataset:
+  split_file: /project/hippocampus/common/kaveh/workspace/nipoppy-projects/nipoppy-hcpya-u100-scpp/tabular/scpp_seg/dataset_split.csv
+  split_name: test
+  session_label: "01"
+  space: MNI152
+
+  roots:
+    HCP_YA:  /project/hippocampus/common/kaveh/workspace/nipoppy-projects/nipoppy-hcpya-u100-scpp/derivatives/scpp-preproc-0.1
+    OASIS1:  /project/hippocampus/common/kaveh/workspace/nipoppy-projects/nipoppy-oasis-1-scpp/derivatives/scpp-preproc-0.1
+
+evaluation:
+  num_classes: 9
+  exclude_background: true
+  nsd_tolerance_vox: 1.0
+  spacing: [1.0, 1.0, 1.0]
+
+outputs:
+  pred_roots:
+    HCP_YA: /project/hippocampus/common/kaveh/workspace/nipoppy-projects/nipoppy-hcpya-u100-scpp/derivatives/scpp-seg-0.1
+    OASIS1: /project/hippocampus/common/kaveh/workspace/nipoppy-projects/nipoppy-oasis-1-scpp/derivatives/scpp-seg-0.1
+
+  log_dir:  /project/hippocampus/common/kaveh/workspace/scpp-runs/seg/exp01_hcpya+oasis1/logs_eval
+  eval_csv: /project/hippocampus/common/kaveh/workspace/scpp-runs/seg/exp01_hcpya+oasis1/evals/seg_eval_test.csv
+  eval_xlsx: /project/hippocampus/common/kaveh/workspace/scpp-runs/seg/exp01_hcpya+oasis1/evals/seg_eval_test.xlsx
+
+hydra:
+  run:
+    dir: ${outputs.log_dir}
+  output_subdir: null
+  job:
+    chdir: false

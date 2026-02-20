@@ -4,7 +4,7 @@ import sys
 import subprocess
 import typer
 
-from nipoppy_custom_pipeline.preproc.fs_to_mni import app as fs_to_mni_app
+from simcortexpp.preproc.fs_to_mni import app as fs_to_mni_app
 
 app = typer.Typer(help="SimCortexPP (SCPP) CLI")
 
@@ -32,10 +32,10 @@ def seg_train(
             "torchrun",
             f"--nproc_per_node={nproc_per_node}",
             "-m",
-            "nipoppy_custom_pipeline.seg.train",
+            "simcortexpp.seg.train",
         ]
     else:
-        cmd = [sys.executable, "-m", "nipoppy_custom_pipeline.seg.train"]
+        cmd = [sys.executable, "-m", "simcortexpp.seg.train"]
 
     cmd += (overrides or [])
     raise typer.Exit(subprocess.call(cmd))
@@ -44,14 +44,14 @@ def seg_train(
 @seg_app.command("infer")
 def seg_infer(overrides: list[str] = typer.Argument(None)):
     """Run segmentation inference (Hydra)."""
-    cmd = [sys.executable, "-m", "nipoppy_custom_pipeline.seg.inference"] + (overrides or [])
+    cmd = [sys.executable, "-m", "simcortexpp.seg.inference"] + (overrides or [])
     raise typer.Exit(subprocess.call(cmd))
 
 
 @seg_app.command("eval")
 def seg_eval(overrides: list[str] = typer.Argument(None)):
     """Run segmentation evaluation (Hydra)."""
-    cmd = [sys.executable, "-m", "nipoppy_custom_pipeline.seg.eval"] + (overrides or [])
+    cmd = [sys.executable, "-m", "simcortexpp.seg.eval"] + (overrides or [])
     raise typer.Exit(subprocess.call(cmd))
 
 

@@ -1,0 +1,42 @@
+dataset:
+  split_file: /project/hippocampus/common/kaveh/workspace/nipoppy-projects/nipoppy-hcpya-u100/tabular/scpp_seg/dataset_split.csv
+
+  roots:
+    HCP_YA:  /project/hippocampus/common/kaveh/workspace/nipoppy-projects/nipoppy-hcpya-u100/derivatives/scpp-preproc-0.1
+    OASIS1:  /project/hippocampus/common/kaveh/workspace/nipoppy-projects/nipoppy-oasis-1/derivatives/scpp-preproc-0.1
+
+  train_split: train
+  val_split: val
+  session_label: "01"
+  space: "MNI152"
+  pad_mult: 16
+  augment: true
+
+
+trainer:
+  device: cuda:0
+  num_epochs: 500
+  learning_rate: 1e-4
+  batch_size: 6
+  num_workers: 4
+  validation_interval: 15
+  dice_weight: 1.0
+  use_ddp: true
+  data_parallel: false
+
+model:
+  in_channels: 1
+  out_channels: 9
+
+outputs:
+  root: /project/hippocampus/common/kaveh/workspace/scpp-runs/seg/exp01_hcpya+oasis1
+  log_dir:  ${outputs.root}/logs_train
+  ckpt_dir: ${outputs.root}/checkpoints
+
+
+hydra:
+  run:
+    dir: ${outputs.log_dir}
+  output_subdir: null
+  job:
+    chdir: false

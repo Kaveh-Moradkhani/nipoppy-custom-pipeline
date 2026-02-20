@@ -1,4 +1,4 @@
-# nipoppy_custom_pipeline/seg/data/dataloader.py
+# simcortexpp/seg/data/dataloader.py
 from __future__ import annotations
 
 import numpy as np
@@ -9,7 +9,7 @@ import nibabel as nib
 
 from pathlib import Path
 from torch.utils.data import Dataset
-from typing import Dict, Set, Tuple
+from typing import Dict, Set, Tuple, Optional
 
 from monai.transforms import (
     Compose,
@@ -130,19 +130,46 @@ def _filled_mni_path(deriv_root: Path, sub: str, ses: str, space: str) -> Path:
     return _anat_dir(deriv_root, sub, ses) / f"{st}_space-{space}_desc-filled_T1w.nii.gz"
 
 
-def _pred_seg9_path(pred_root: Path, sub: str, ses: str, space: str) -> Path:
+def _pred_seg9_candidates(pred_root: Path, sub: str, ses: str, space: str) -> Tuple[Path, Path]:
     st = _stem(sub, ses)
-    return pred_root / sub / ses / "anat" / f"{st}_space-{space}_desc-seg9_pred.nii.gz"
+    prefix = pred_root / sub / ses / "anat" / f"{st}_space-{space}_desc-seg9"
+    return (
+        Path(str(prefix) + "_dseg.nii.gz"),  # BIDS-correct
+        Path(str(prefix) + "_pred.nii.gz"),  # legacy fallback
+    )
 
 
-def _read_split_subjects(split_csv: Path, split_name: str) -> list[str]:
+def _resolve_pred_seg9_path(pred_root: Path, sub: str, ses: str, space: str) -> Path:
+    cands = _pred_seg9_candidates(pred_root, sub, ses, space)
+    for p in cands:
+        if p.exists():
+            return p
+    raise FileNotFoundError(f"Missing prediction: {cands[0]}")
+
+
+
+def _read_split_subjects(split_csv: Path, split_name: str, dataset: Optional[str] = None) -> list[str]:
     df = pd.read_csv(split_csv)
+
     if "subject" not in df.columns or "split" not in df.columns:
-        raise ValueError(f"split_csv must have columns ['subject','split'], got: {list(df.columns)}")
-    subs = df[df["split"] == split_name]["subject"].astype(str).tolist()
+        raise ValueError(f"split_csv must have columns ['subject','split', ...], got: {list(df.columns)}")
+
+    if dataset is not None:
+        if "dataset" not in df.columns:
+            raise ValueError(
+                f"split_csv has no 'dataset' column, but dataset='{dataset}' was provided. "
+                f"Columns: {list(df.columns)}"
+            )
+        df = df[df["dataset"].astype(str).str.strip() == str(dataset).strip()]
+
+    split_name = str(split_name).strip()
+    subs = df[df["split"].astype(str).str.strip() == split_name]["subject"].astype(str).tolist()
     subs = sorted(subs)
+
     if not subs:
-        raise ValueError(f"No subjects found for split='{split_name}' in {split_csv}")
+        extra = f" and dataset='{dataset}'" if dataset is not None else ""
+        raise ValueError(f"No subjects found for split='{split_name}'{extra} in {split_csv}")
+
     return subs
 
 
@@ -152,6 +179,7 @@ class SegDataset(Dataset):
         deriv_root: str,
         split_csv: str,
         split: str = "train",
+        dataset: Optional[str] = None,
         session_label: str = "01",
         space: str = "MNI152",
         pad_mult: int = 16,
@@ -161,11 +189,12 @@ class SegDataset(Dataset):
         self.deriv_root = Path(deriv_root)
         self.split_csv = Path(split_csv)
         self.split = split
+        self.dataset = dataset
         self.ses = _ses_id(session_label)
         self.space = space
         self.pad_mult = pad_mult
 
-        self.subjects = _read_split_subjects(self.split_csv, split)
+        self.subjects = _read_split_subjects(self.split_csv, split, dataset=self.dataset)
         self.transforms = get_augmentations() if (split == "train" and augment) else None
 
     def __len__(self) -> int:
@@ -213,6 +242,7 @@ class PredictSegDataset(Dataset):
         deriv_root: str,
         split_csv: str,
         split_name: str = "test",
+        dataset: Optional[str] = None,
         session_label: str = "01",
         space: str = "MNI152",
         pad_mult: int = 16,
@@ -221,10 +251,11 @@ class PredictSegDataset(Dataset):
         self.deriv_root = Path(deriv_root)
         self.split_csv = Path(split_csv)
         self.ses = _ses_id(session_label)
+        self.dataset = dataset
         self.space = space
         self.pad_mult = pad_mult
 
-        self.subjects = _read_split_subjects(self.split_csv, split_name)
+        self.subjects = _read_split_subjects(self.split_csv, split_name, dataset=self.dataset)
 
     def __len__(self) -> int:
         return len(self.subjects)
@@ -254,6 +285,7 @@ class EvalSegDataset(Dataset):
         split_csv: str,
         pred_root: str,
         split_name: str = "test",
+        dataset: Optional[str] = None,
         session_label: str = "01",
         space: str = "MNI152",
     ):
@@ -262,9 +294,10 @@ class EvalSegDataset(Dataset):
         self.split_csv = Path(split_csv)
         self.pred_root = Path(pred_root)
         self.ses = _ses_id(session_label)
+        self.dataset = dataset
         self.space = space
 
-        self.subjects = _read_split_subjects(self.split_csv, split_name)
+        self.subjects = _read_split_subjects(self.split_csv, split_name, dataset=self.dataset)
 
     def __len__(self) -> int:
         return len(self.subjects)
@@ -274,7 +307,7 @@ class EvalSegDataset(Dataset):
 
         gt_path = _aparc_aseg_mni_path(self.deriv_root, sub, self.ses, self.space)
         fill_path = _filled_mni_path(self.deriv_root, sub, self.ses, self.space)
-        pred_path = _pred_seg9_path(self.pred_root, sub, self.ses, self.space)
+        pred_path = _resolve_pred_seg9_path(self.pred_root, sub, self.ses, self.space)
 
         if not gt_path.exists():
             raise FileNotFoundError(f"Missing GT aparc+aseg (MNI): {gt_path}")
@@ -285,7 +318,7 @@ class EvalSegDataset(Dataset):
 
         gt_arr = nib.load(str(gt_path)).get_fdata().astype(np.int32)
         fill_arr = nib.load(str(fill_path)).get_fdata().astype(np.float32)
-        pred_arr = nib.load(str(pred_path)).get_fdata().astype(np.int32)
+        pred_arr = np.rint(nib.load(str(pred_path)).get_fdata()).astype(np.int32)
 
         gt9 = map_labels(gt_arr, fill_arr)
 
