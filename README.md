@@ -291,6 +291,72 @@ scpp seg eval \
 
 ---
 
+## Stage 3 — Initial surfaces (InitSurf)
+
+Generates initial cortical surfaces from saved segmentation predictions (not end-to-end).
+
+What it does per subject:
+- reads MNI T1 from `scpp-preproc-*`
+- reads 9-class segmentation from `scpp-seg-*`
+- builds hemisphere WM masks
+- computes SDFs and applies topology correction
+- finds **collision-free** WM and Pial surfaces (LH/RH)
+- writes WM/Pial meshes and SDF volumes
+- builds a ribbon mask and saves ribbon SDF + ribbon probability
+
+### Inputs
+- Preproc roots (`scpp-preproc-*`) for MNI T1
+- Seg roots (`scpp-seg-*`) for `..._desc-seg9_dseg.nii.gz`
+- Split CSV (same as segmentation)
+
+### Outputs
+BIDS-derivatives-style outputs under `scpp-initsurf-*`:
+
+```text
+scpp-initsurf-0.1/
+  dataset_description.json
+  sub-XXXX/
+    ses-01/
+      anat/
+        sub-XXXX_ses-01_space-MNI152_desc-lh_white_sdf.nii.gz
+        sub-XXXX_ses-01_space-MNI152_desc-rh_white_sdf.nii.gz
+        sub-XXXX_ses-01_space-MNI152_desc-lh_pial_sdf.nii.gz
+        sub-XXXX_ses-01_space-MNI152_desc-rh_pial_sdf.nii.gz
+        sub-XXXX_ses-01_space-MNI152_desc-ribbon_sdf.nii.gz
+        sub-XXXX_ses-01_space-MNI152_desc-ribbon_prob.nii.gz
+      surfaces/
+        sub-XXXX_ses-01_space-MNI152_hemi-L_white.surf.ply
+        sub-XXXX_ses-01_space-MNI152_hemi-L_pial.surf.ply
+        sub-XXXX_ses-01_space-MNI152_hemi-R_white.surf.ply
+        sub-XXXX_ses-01_space-MNI152_hemi-R_pial.surf.ply
+```
+
+## Run (multi-dataset example)
+You can override Hydra config parameters directly from the CLI. Break down the paths for readability:
+```bash
+scpp initsurf generate \
+  dataset.split_file=/path/to/dataset_split.csv \
+  dataset.split_name=all \
+  dataset.roots.HCP_YA=/path/to/nipoppy-hcpya-u100-scpp/derivatives/scpp-preproc-0.1 \
+  dataset.roots.OASIS1=/path/to/nipoppy-oasis-1-scpp/derivatives/scpp-preproc-0.1 \
+  dataset.seg_roots.HCP_YA=/path/to/nipoppy-hcpya-u100-scpp/derivatives/scpp-seg-0.1 \
+  dataset.seg_roots.OASIS1=/path/to/nipoppy-oasis-1-scpp/derivatives/scpp-seg-0.1 \
+  outputs.out_roots.HCP_YA=/path/to/nipoppy-hcpya-u100-scpp/derivatives/scpp-initsurf-0.1 \
+  outputs.out_roots.OASIS1=/path/to/nipoppy-oasis-1-scpp/derivatives/scpp-initsurf-0.1 \
+  outputs.log_dir=/path/to/scpp-runs/initsurf/exp01/logs_generate
+```
+
+---
+
+## Recommended workflow order
+
+1) Run preprocessing for each dataset → `scpp-preproc-0.1`  
+2) Train segmentation (once) → checkpoint `seg_best_dice.pt`  
+3) Run segmentation inference for all subjects → `scpp-seg-0.1`  
+4) Run InitSurf generation from saved predictions → `scpp-initsurf-0.1`
+
+---
+
 
 
 ## License

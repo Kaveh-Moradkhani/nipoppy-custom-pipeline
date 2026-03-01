@@ -5,6 +5,8 @@ import subprocess
 import typer
 
 from simcortexpp.preproc.fs_to_mni import app as fs_to_mni_app
+from simcortexpp.initsurf.generate import main as initsurf_generate
+
 
 app = typer.Typer(help="SimCortexPP (SCPP) CLI")
 
@@ -14,6 +16,8 @@ app.add_typer(fs_to_mni_app, name="fs-to-mni", help="FreeSurfer -> MNI preproces
 # Segmentation group
 seg_app = typer.Typer(help="Segmentation (3D U-Net) stage")
 app.add_typer(seg_app, name="seg")
+
+initsurf_app = typer.Typer(help="Initial surface generation (from seg predictions)")
 
 
 @seg_app.command("train")
@@ -53,6 +57,19 @@ def seg_eval(overrides: list[str] = typer.Argument(None)):
     """Run segmentation evaluation (Hydra)."""
     cmd = [sys.executable, "-m", "simcortexpp.seg.eval"] + (overrides or [])
     raise typer.Exit(subprocess.call(cmd))
+
+@initsurf_app.command("generate")
+def generate(overrides: list[str] = typer.Argument(None)):
+    # overrides comes like: ["dataset.split_name=all", ...]
+    if overrides is None:
+        overrides = []
+    # Hydra entrypoint expects sys.argv style; easiest: temporarily patch sys.argv
+    import sys
+    sys.argv = [sys.argv[0]] + overrides
+    initsurf_generate()
+
+app.add_typer(initsurf_app, name="initsurf")
+
 
 
 if __name__ == "__main__":

@@ -1,0 +1,49 @@
+dataset:
+  split_file: /path/to/dataset_split.csv
+  split_name: all
+  session_label: "01"
+  space: "MNI152"
+
+  # Preproc roots (where preprocessed T1 lives)
+  roots:
+    HCP_YA: /path/to/.../derivatives/scpp-preproc-0.1
+    OASIS1: /path/to/.../derivatives/scpp-preproc-0.1
+
+  # Segmentation roots (where seg9_dseg lives)
+  seg_roots:
+    HCP_YA: /path/to/.../derivatives/scpp-seg-0.1
+    OASIS1: /path/to/.../derivatives/scpp-seg-0.1
+
+outputs:
+  out_roots:
+    HCP_YA: /path/to/.../derivatives/scpp-initsurf-0.1
+    OASIS1: /path/to/.../derivatives/scpp-initsurf-0.1
+  log_dir: /path/to/scpp-runs/initsurf/exp01/logs_generate
+
+params:
+  gap_size: 1
+
+  sdf_sigma: 0.5
+  topo_threshold: 16.0
+  n_smooth: 2
+
+  wm_thickness: 1.0
+  wm_start_level: -0.2
+  wm_step: -0.08
+  wm_min_level: -5.0
+  wm_max_iters: 120
+
+  pial_start_level: 0.1
+  pial_step: 0.05
+  pial_max_level: 5.0
+  pial_max_iters: 120
+  pial_shrink_step: 0.05
+  pial_shrink_max_iters: 80
+
+
+hydra:
+  run:
+    dir: ${outputs.log_dir}
+  output_subdir: null
+  job:
+    chdir: false
