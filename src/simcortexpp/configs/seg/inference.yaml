@@ -1,13 +1,13 @@
 dataset:
-  split_file: /project/hippocampus/common/kaveh/workspace/nipoppy-projects/nipoppy-hcpya-u100-scpp/tabular/scpp_seg/dataset_split.csv
+  split_file: /project/hippocampus/common/kaveh/workspace/datasets/splits/dataset_split.csv
   split_name: test
   session_label: "01"
   space: "MNI152"
   pad_mult: 16
 
   roots:
-    HCP_YA: /project/hippocampus/common/kaveh/workspace/nipoppy-projects/nipoppy-hcpya-u100-scpp/derivatives/scpp-preproc-0.1
-    OASIS1: /project/hippocampus/common/kaveh/workspace/nipoppy-projects/nipoppy-oasis-1-scpp/derivatives/scpp-preproc-0.1
+    HCP_YA: /project/hippocampus/common/kaveh/workspace/datasets/hcpya-u100/derivatives/scpp-preproc-0.1
+    OASIS1: /project/hippocampus/common/kaveh/workspace/datasets/oasis-1/derivatives/scpp-preproc-0.1
 
 trainer:
   device: cuda:0
@@ -21,9 +21,11 @@ model:
 
 outputs:
   out_roots:
-    HCP_YA: /project/hippocampus/common/kaveh/workspace/nipoppy-projects/nipoppy-hcpya-u100-scpp/derivatives/scpp-seg-0.1
-    OASIS1: /project/hippocampus/common/kaveh/workspace/nipoppy-projects/nipoppy-oasis-1-scpp/derivatives/scpp-seg-0.1
-  log_dir: /project/hippocampus/common/kaveh/workspace/scpp-runs/seg/exp01_hcpya+oasis1/logs_infer
+    HCP_YA: /project/hippocampus/common/kaveh/workspace/datasets/hcpya-u100/derivatives/scpp-seg-0.1
+    OASIS1: /project/hippocampus/common/kaveh/workspace/datasets/oasis-1/derivatives/scpp-seg-0.1
+
+  log_dir: /project/hippocampus/common/kaveh/workspace/scpp-runs/seg/exp01_hcpya+oasis1/logs_infer_test
+
 
 hydra:
   run:

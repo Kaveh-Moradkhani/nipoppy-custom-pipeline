@@ -1,24 +1,25 @@
 dataset:
-  split_file: /path/to/dataset_split.csv
+  split_file: /project/hippocampus/common/kaveh/workspace/datasets/splits/dataset_split.csv
   split_name: all
   session_label: "01"
   space: "MNI152"
 
   # Preproc roots (where preprocessed T1 lives)
   roots:
-    HCP_YA: /path/to/.../derivatives/scpp-preproc-0.1
-    OASIS1: /path/to/.../derivatives/scpp-preproc-0.1
+    HCP_YA: /project/hippocampus/common/kaveh/workspace/datasets/hcpya-u100/derivatives/scpp-preproc-0.1
+    OASIS1: /project/hippocampus/common/kaveh/workspace/datasets/oasis-1/derivatives/scpp-preproc-0.1
+
 
   # Segmentation roots (where seg9_dseg lives)
   seg_roots:
-    HCP_YA: /path/to/.../derivatives/scpp-seg-0.1
-    OASIS1: /path/to/.../derivatives/scpp-seg-0.1
+    HCP_YA: /project/hippocampus/common/kaveh/workspace/datasets/hcpya-u100/derivatives/scpp-seg-0.1
+    OASIS1: /project/hippocampus/common/kaveh/workspace/datasets/oasis-1/derivatives/scpp-seg-0.1
 
 outputs:
   out_roots:
-    HCP_YA: /path/to/.../derivatives/scpp-initsurf-0.1
-    OASIS1: /path/to/.../derivatives/scpp-initsurf-0.1
-  log_dir: /path/to/scpp-runs/initsurf/exp01/logs_generate
+    HCP_YA: /project/hippocampus/common/kaveh/workspace/datasets/hcpya-u100/derivatives/scpp-initsurf-0.1
+    OASIS1: /project/hippocampus/common/kaveh/workspace/datasets/oasis-1/derivatives/scpp-initsurf-0.1
+  log_dir: /project/hippocampus/common/kaveh/workspace/scpp-runs/initsurf/exp01_hcpya+oasis1/logs_generate
 
 params:
   gap_size: 1

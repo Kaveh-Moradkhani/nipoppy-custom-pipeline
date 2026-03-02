@@ -1,9 +1,9 @@
 dataset:
-  split_file: /project/hippocampus/common/kaveh/workspace/nipoppy-projects/nipoppy-hcpya-u100/tabular/scpp_seg/dataset_split.csv
+  split_file: /project/hippocampus/common/kaveh/workspace/datasets/splits/dataset_split.csv
 
   roots:
-    HCP_YA:  /project/hippocampus/common/kaveh/workspace/nipoppy-projects/nipoppy-hcpya-u100/derivatives/scpp-preproc-0.1
-    OASIS1:  /project/hippocampus/common/kaveh/workspace/nipoppy-projects/nipoppy-oasis-1/derivatives/scpp-preproc-0.1
+    HCP_YA:  /project/hippocampus/common/kaveh/workspace/datasets/hcpya-u100/derivatives/scpp-preproc-0.1
+    OASIS1:  /project/hippocampus/common/kaveh/workspace/datasets/oasis-1/derivatives/scpp-preproc-0.1
 
   train_split: train
   val_split: val

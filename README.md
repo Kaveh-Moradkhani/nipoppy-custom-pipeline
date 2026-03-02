@@ -1,25 +1,26 @@
-# SimCortexPP (SCPP) — Nipoppy-ready MRI Pipeline
+# SimCortexPP (SCPP)
 
-SimCortexPP (SCPP) is a **CLI-first** Python package that provides two practical stages commonly needed in neuroimaging workflows and easy to integrate into **Nipoppy**:
+SimCortexPP (SCPP) is a **CLI-first** Python package that provides three practical stages commonly needed in neuroimaging workflows:
 
 1. **Preprocessing (FreeSurfer → MNI152)**  
-   Export FreeSurfer volumes/surfaces, register to MNI152, and write outputs in a **BIDS-derivatives-style** layout.
+   Export FreeSurfer volumes and surfaces, register them to MNI152, and write outputs in a **BIDS-derivatives-style** layout.
 
 2. **Segmentation (3D U-Net in MNI space)**  
    Train and apply a 3D U-Net to predict a **9-class** segmentation in **MNI152 space**, with inference and evaluation utilities.
 
-3. **Initial Surfaces (InitSurf)** Generate robust, collision-free initial White Matter and Pial cortical surfaces from the segmentation predictions.
+3. **Initial Surfaces (InitSurf)**  
+   Generate collision-free initial White Matter and Pial cortical surfaces from the segmentation predictions.
 
 This README focuses on **how to run the pipeline correctly** (inputs, outputs, expected folder/file naming, and commands).
 
 ---
+
 
 ## Table of Contents
 
 - [Installation](#installation)
 - [Data and Folder Conventions](#data-and-folder-conventions)
 - [Session-less BIDS Datasets (Optional)](#session-less-bids-datasets-optional)
-- [Nipoppy Project Setup (Optional)](#nipoppy-project-setup-optional)
 - [Stage 1 — Preprocessing: FreeSurfer → MNI152](#stage-1--preprocessing-freesurfer--mni152)
 - [Stage 2 — Segmentation: 3D U-Net (MNI space)](#stage-2--segmentation-3d-u-net-mni-space)
   - [Split File Format](#split-file-format)
@@ -52,27 +53,19 @@ scpp initsurf --help
 
 ## Data and Folder Conventions
 
-You will typically work with **three roots**:
+You will typically work with **two roots**:
 
-1) **Code repo (this repository)**  
-Contains code + configs + scripts (no data).
+1) **Code repository (this repository)**  
+Contains code, configs, and scripts (no data).
 
-2) **Study data root (raw + derivatives)**  
-Example (conceptually):  
-- `rawdata/` or BIDS-like dataset
-- `derivatives/freesurfer-7.4.1/` (FreeSurfer outputs)
-- additional derivatives
-
-3) **Nipoppy dataset root (workspace for the study)** *(optional but recommended)*  
-Contains Nipoppy project structure:
-- `global_config.json`, `manifest.tsv`, `pipelines/`, etc.
-- symlinks to large derivatives to avoid copying
+2) **Dataset root (BIDS + derivatives)**  
+Each dataset has its own root directory. Recommended structure:
 
 ---
 
 ## Session-less BIDS Datasets (Optional)
 
-Some datasets do not have a `ses-*` level (session-less). If you want a consistent `session_id` in Nipoppy manifests, you can create a **non-destructive sessioned view** via symlinks.
+Some datasets are **session-less** (no `ses-*` folder). If you want a consistent `ses-01` layout, you can create a **non-destructive sessioned view** using symlinks.
 
 Script:
 ```bash
@@ -96,32 +89,16 @@ This creates:
 - symlinked files
 - filenames updated to include `_ses-01_` where needed
 
-To undo:
+To remove the sessioned view:
 ```bash
 rm -rf /path/to/rawdata_ses
 ```
-
 ---
 
-## Nipoppy Project Setup (Optional)
-
-Initialize a Nipoppy dataset root using the sessioned view:
-
-```bash
-NIPROOT=/path/to/nipoppy-projects/<study-name>
-nipoppy init --dataset "$NIPROOT" --bids-source "/path/to/rawdata_ses"
-```
-
-Link existing FreeSurfer derivatives (recommended to avoid copying):
-```bash
-ln -sfn "/path/to/study/derivatives/freesurfer-7.4.1" "$NIPROOT/derivatives/freesurfer-7.4.1"
-```
-
----
 
 ## Stage 1 — Preprocessing: FreeSurfer → MNI152
 
-This stage converts key FreeSurfer outputs into a **BIDS-derivatives-style** directory in MNI space.
+This stage exports key FreeSurfer outputs (volumes + surfaces), registers them to **MNI152**, and writes results to a **BIDS-derivatives-style** folder.
 
 ### Inputs
 - FreeSurfer derivatives root (contains subject folders)
@@ -133,7 +110,7 @@ This stage converts key FreeSurfer outputs into a **BIDS-derivatives-style** dir
 
 ### Run (all subjects discovered automatically)
 ```bash
-python scripts/preprocess_fs_to_mni_bidsderiv.py \
+scpp fs-to-mni \
   --freesurfer-root /path/to/derivatives/freesurfer-7.4.1 \
   --out-deriv-root  /path/to/derivatives/scpp-preproc-0.1 \
   --mni-template    /path/to/MNI152_T1_1mm.nii.gz \
@@ -143,7 +120,7 @@ python scripts/preprocess_fs_to_mni_bidsderiv.py \
 
 ### Run (selected subjects)
 ```bash
-python scripts/preprocess_fs_to_mni_bidsderiv.py \
+scpp fs-to-mni \
   --freesurfer-root /path/to/derivatives/freesurfer-7.4.1 \
   --out-deriv-root  /path/to/derivatives/scpp-preproc-0.1 \
   --mni-template    /path/to/MNI152_T1_1mm.nii.gz \
@@ -174,22 +151,23 @@ scpp-preproc-0.1/
 
 This stage trains and applies a 3D U-Net to predict a **9-class segmentation** in MNI space using the preprocessed outputs.
 
-### Expected inputs (from preprocessing)
-Under `dataset.path` (or per-dataset roots), for each subject:
+### Expected inputs (from Stage 1)
+Under `dataset.path` (single dataset) or per-dataset `dataset.roots` (multi-dataset), for each subject:
 
-- MNI T1
-  - `sub-XXXX/ses-01/anat/sub-XXXX_ses-01_space-MNI152_desc-preproc_T1w.nii.gz`
-- MNI aparc+aseg (used to create the 9-class GT)
-  - `sub-XXXX/ses-01/anat/sub-XXXX_ses-01_space-MNI152_desc-aparc+aseg_dseg.nii.gz`
-- MNI filled (used for ambiguity fix in label mapping)
-  - `sub-XXXX/ses-01/anat/sub-XXXX_ses-01_space-MNI152_desc-filled_T1w.nii.gz`
+- MNI T1  
+  `sub-XXXX/ses-01/anat/sub-XXXX_ses-01_space-MNI152_desc-preproc_T1w.nii.gz`
+
+- MNI aparc+aseg (used to create the 9-class ground truth)  
+  `sub-XXXX/ses-01/anat/sub-XXXX_ses-01_space-MNI152_desc-aparc+aseg_dseg.nii.gz`
+
+- MNI filled (used for ambiguity fix in label mapping)  
+  `sub-XXXX/ses-01/anat/sub-XXXX_ses-01_space-MNI152_desc-filled_T1w.nii.gz`
 
 ### Output naming (predictions)
-Predictions are written in BIDS-derivatives style under the configured prediction root:
+Predictions are written in BIDS-derivatives style under the configured output root:
 
-- `sub-XXXX/ses-01/anat/sub-XXXX_ses-01_space-MNI152_desc-seg9_pred.nii.gz`
+- `sub-XXXX/ses-01/anat/sub-XXXX_ses-01_space-MNI152_desc-seg9_dseg.nii.gz`
 
----
 
 ## Split File Format
 
@@ -217,8 +195,8 @@ sub-0001,test,OASIS1
 ### Single-GPU
 ```bash
 scpp seg train \
-  dataset.path=/path/to/scpp-preproc-0.1 \
-  dataset.split_file=/path/to/dataset_split.csv \
+  dataset.path=/path/to/datasets/<dataset>/derivatives/scpp-preproc-0.1 \
+  dataset.split_file=/path/to/<dataset>_split.csv \
   outputs.root=/path/to/scpp-runs/seg/exp01 \
   trainer.use_ddp=false
 ```
@@ -226,8 +204,8 @@ scpp seg train \
 ### Multi-GPU DDP (torchrun)
 ```bash
 scpp seg train --torchrun --nproc-per-node 2 \
-  dataset.path=/path/to/scpp-preproc-0.1 \
-  dataset.split_file=/path/to/dataset_split.csv \
+  dataset.path=/path/to/datasets/<dataset>/derivatives/scpp-preproc-0.1 \
+  dataset.split_file=/path/to/<dataset>_split.csv \
   outputs.root=/path/to/scpp-runs/seg/exp01 \
   trainer.use_ddp=true
 ```
@@ -243,11 +221,11 @@ Training outputs typically include:
 ### Single dataset
 ```bash
 scpp seg infer \
-  dataset.path=/path/to/scpp-preproc-0.1 \
-  dataset.split_file=/path/to/dataset_split.csv \
+  dataset.path=/path/to/datasets/<dataset>/derivatives/scpp-preproc-0.1 \
+  dataset.split_file=/path/to/<dataset>_split.csv \
   dataset.split_name=test \
   model.ckpt_path=/path/to/seg_best_dice.pt \
-  outputs.pred_root=/path/to/scpp-seg-0.1
+  outputs.out_root=/path/to/datasets/<dataset>/derivatives/scpp-seg-0.1
 ```
 
 ### Multi-dataset inference (two datasets example)
@@ -257,11 +235,11 @@ Use per-dataset input roots and per-dataset output roots (keys must match your s
 scpp seg infer \
   dataset.split_file=/path/to/dataset_split.csv \
   dataset.split_name=test \
-  dataset.roots.HCP_YA=/path/to/nipoppy-hcpya-u100-scpp/derivatives/scpp-preproc-0.1 \
-  dataset.roots.OASIS1=/path/to/nipoppy-oasis-1-scpp/derivatives/scpp-preproc-0.1 \
+  dataset.roots.HCP_YA=/path/to/datasets/hcpya-u100/derivatives/scpp-preproc-0.1 \
+  dataset.roots.OASIS1=/path/to/datasets/oasis-1/derivatives/scpp-preproc-0.1 \
   model.ckpt_path=/path/to/seg_best_dice.pt \
-  outputs.out_roots.HCP_YA=/path/to/nipoppy-hcpya-u100-scpp/derivatives/scpp-seg-0.1 \
-  outputs.out_roots.OASIS1=/path/to/nipoppy-oasis-1-scpp/derivatives/scpp-seg-0.1
+  outputs.out_roots.HCP_YA=/path/to/datasets/hcpya-u100/derivatives/scpp-seg-0.1 \
+  outputs.out_roots.OASIS1=/path/to/datasets/oasis-1/derivatives/scpp-seg-0.1
 ```
 
 ---
@@ -278,10 +256,10 @@ Evaluation computes (per-subject):
 scpp seg eval \
   dataset.split_file=/path/to/dataset_split.csv \
   dataset.split_name=test \
-  dataset.roots.HCP_YA=/path/to/nipoppy-hcpya-u100-scpp/derivatives/scpp-preproc-0.1 \
-  dataset.roots.OASIS1=/path/to/nipoppy-oasis-1-scpp/derivatives/scpp-preproc-0.1 \
-  outputs.pred_roots.HCP_YA=/path/to/nipoppy-hcpya-u100-scpp/derivatives/scpp-seg-0.1 \
-  outputs.pred_roots.OASIS1=/path/to/nipoppy-oasis-1-scpp/derivatives/scpp-seg-0.1 \
+  dataset.roots.HCP_YA=/path/to/Datasets/hcpya-u100/derivatives/scpp-preproc-0.1 \
+  dataset.roots.OASIS1=/path/to/Datasets/oasis-1/derivatives/scpp-preproc-0.1 \
+  outputs.pred_roots.HCP_YA=/path/to/Datasets/hcpya-u100/derivatives/scpp-seg-0.1 \
+  outputs.pred_roots.OASIS1=/path/to/Datasets/oasis-1/derivatives/scpp-seg-0.1 \
   outputs.eval_csv=/path/to/scpp-runs/seg/exp01/evals/seg_eval_test.csv \
   outputs.eval_xlsx=/path/to/scpp-runs/seg/exp01/evals/seg_eval_test.xlsx
 ```
@@ -297,7 +275,7 @@ scpp seg eval \
 
 ## Stage 3 — Initial surfaces (InitSurf)
 
-Generates initial cortical surfaces from saved segmentation predictions (not end-to-end).
+Generates initial cortical surfaces from saved segmentation predictions.
 
 What it does per subject:
 - reads MNI T1 from `scpp-preproc-*`
@@ -341,15 +319,17 @@ You can override Hydra config parameters directly from the CLI. Break down the p
 scpp initsurf generate \
   dataset.split_file=/path/to/dataset_split.csv \
   dataset.split_name=all \
-  dataset.roots.HCP_YA=/path/to/nipoppy-hcpya-u100-scpp/derivatives/scpp-preproc-0.1 \
-  dataset.roots.OASIS1=/path/to/nipoppy-oasis-1-scpp/derivatives/scpp-preproc-0.1 \
-  dataset.seg_roots.HCP_YA=/path/to/nipoppy-hcpya-u100-scpp/derivatives/scpp-seg-0.1 \
-  dataset.seg_roots.OASIS1=/path/to/nipoppy-oasis-1-scpp/derivatives/scpp-seg-0.1 \
-  outputs.out_roots.HCP_YA=/path/to/nipoppy-hcpya-u100-scpp/derivatives/scpp-initsurf-0.1 \
-  outputs.out_roots.OASIS1=/path/to/nipoppy-oasis-1-scpp/derivatives/scpp-initsurf-0.1 \
+  dataset.roots.HCP_YA=/path/to/Datasets/hcpya-u100/derivatives/scpp-preproc-0.1 \
+  dataset.roots.OASIS1=/path/to/Datasets/oasis-1/derivatives/scpp-preproc-0.1 \
+  dataset.seg_roots.HCP_YA=/path/to/Datasets/hcpya-u100/derivatives/scpp-seg-0.1 \
+  dataset.seg_roots.OASIS1=/path/to/Datasets/oasis-1/derivatives/scpp-seg-0.1 \
+  outputs.out_roots.HCP_YA=/path/to/Datasets/hcpya-u100/derivatives/scpp-initsurf-0.1 \
+  outputs.out_roots.OASIS1=/path/to/Datasets/oasis-1/derivatives/scpp-initsurf-0.1 \
   outputs.log_dir=/path/to/scpp-runs/initsurf/exp01/logs_generate
 ```
-
+```
+Typical runtime: ~31 s/subject (based on a 515-subject run; hardware-dependent).
+```
 ---
 
 ## Recommended workflow order
